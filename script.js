@@ -117,17 +117,35 @@ window.addGame = function (event) {
     created: new Date().toISOString()
   };
 
-  // Save to Firebase
-  set(ref(database, `games/${gameId}`), gameData)
-    .then(() => {
-      notify("✔️ Jogo adicionado com sucesso!", 'success');
-      document.getElementById("addGameForm").reset();
-      renderGamesTable();
-      updateGameSelect();
-    })
-    .catch((error) => {
-      notify("❌ Erro ao adicionar jogo: " + error.message, 'error');
-    });
+  // Save to Firebase with localStorage fallback
+  try {
+    set(ref(database, `games/${gameId}`), gameData)
+      .then(() => {
+        notify("✔️ Jogo adicionado com sucesso!", 'success');
+        document.getElementById("addGameForm").reset();
+        renderGamesTable();
+        updateGameSelect();
+      })
+      .catch((error) => {
+        console.warn("Firebase erro, usando localStorage:", error);
+        // Fallback to localStorage
+        appState.games.push(gameData);
+        localStorage.setItem('games', JSON.stringify(appState.games));
+        notify("✔️ Jogo adicionado com sucesso!", 'success');
+        document.getElementById("addGameForm").reset();
+        renderGamesTable();
+        updateGameSelect();
+      });
+  } catch (error) {
+    console.warn("Firebase não disponível, usando localStorage:", error);
+    // Fallback to localStorage
+    appState.games.push(gameData);
+    localStorage.setItem('games', JSON.stringify(appState.games));
+    notify("✔️ Jogo adicionado com sucesso!", 'success');
+    document.getElementById("addGameForm").reset();
+    renderGamesTable();
+    updateGameSelect();
+  }
 };
 
 window.removeGame = function (gameId) {
@@ -286,21 +304,47 @@ window.placeBet = function (event) {
     }
   };
 
-  // Save to Firebase
-  set(ref(database, `bets/${betId}`), betData)
-    .then(() => {
-      notify("✔️ Aposta realizada com sucesso!", 'success');
-      document.getElementById("betForm").reset();
-      appState.selectedGameId = "";
-      appState.selectedBetType = "";
-      appState.selectedOdd = 0;
-      Utils.hide(document.getElementById("oddsContainer"));
-      Utils.hide(document.getElementById("possibleWinDisplay"));
-      renderBetsTable();
-    })
-    .catch((error) => {
-      notify("❌ Erro ao realizar aposta: " + error.message, 'error');
-    });
+  // Save to Firebase with localStorage fallback
+  try {
+    set(ref(database, `bets/${betId}`), betData)
+      .then(() => {
+        notify("✔️ Aposta realizada com sucesso!", 'success');
+        document.getElementById("betForm").reset();
+        appState.selectedGameId = "";
+        appState.selectedBetType = "";
+        appState.selectedOdd = 0;
+        Utils.hide(document.getElementById("oddsContainer"));
+        Utils.hide(document.getElementById("possibleWinDisplay"));
+        renderBetsTable();
+      })
+      .catch((error) => {
+        console.warn("Firebase erro, usando localStorage:", error);
+        // Fallback to localStorage
+        appState.bets.push(betData);
+        localStorage.setItem('bets', JSON.stringify(appState.bets));
+        notify("✔️ Aposta realizada com sucesso!", 'success');
+        document.getElementById("betForm").reset();
+        appState.selectedGameId = "";
+        appState.selectedBetType = "";
+        appState.selectedOdd = 0;
+        Utils.hide(document.getElementById("oddsContainer"));
+        Utils.hide(document.getElementById("possibleWinDisplay"));
+        renderBetsTable();
+      });
+  } catch (error) {
+    console.warn("Firebase não disponível, usando localStorage:", error);
+    // Fallback to localStorage
+    appState.bets.push(betData);
+    localStorage.setItem('bets', JSON.stringify(appState.bets));
+    notify("✔️ Aposta realizada com sucesso!", 'success');
+    document.getElementById("betForm").reset();
+    appState.selectedGameId = "";
+    appState.selectedBetType = "";
+    appState.selectedOdd = 0;
+    Utils.hide(document.getElementById("oddsContainer"));
+    Utils.hide(document.getElementById("possibleWinDisplay"));
+    renderBetsTable();
+  }
 };
 
 // Bet management for admin
@@ -432,24 +476,53 @@ function updateGameSelect() {
   });
 }
 
-// Firebase listeners
+// Firebase listeners with localStorage fallback
 function initializeFirebaseListeners() {
-  // Listen to games
-  const gamesRef = ref(database, 'games');
-  onValue(gamesRef, (snapshot) => {
-    const data = snapshot.val();
-    appState.games = data ? Object.values(data) : [];
-    renderGamesTable();
-    updateGameSelect();
-  });
+  try {
+    // Listen to games
+    const gamesRef = ref(database, 'games');
+    onValue(gamesRef, (snapshot) => {
+      const data = snapshot.val();
+      appState.games = data ? Object.values(data) : [];
+      renderGamesTable();
+      updateGameSelect();
+    }, (error) => {
+      console.warn("Firebase games listener erro, usando localStorage:", error);
+      loadFromLocalStorage();
+    });
 
-  // Listen to bets
-  const betsRef = ref(database, 'bets');
-  onValue(betsRef, (snapshot) => {
-    const data = snapshot.val();
-    appState.bets = data ? Object.values(data) : [];
-    renderBetsTable();
-  });
+    // Listen to bets
+    const betsRef = ref(database, 'bets');
+    onValue(betsRef, (snapshot) => {
+      const data = snapshot.val();
+      appState.bets = data ? Object.values(data) : [];
+      renderBetsTable();
+    }, (error) => {
+      console.warn("Firebase bets listener erro, usando localStorage:", error);
+      loadFromLocalStorage();
+    });
+  } catch (error) {
+    console.warn("Firebase não disponível, usando localStorage:", error);
+    loadFromLocalStorage();
+  }
+}
+
+function loadFromLocalStorage() {
+  // Load games from localStorage
+  const savedGames = localStorage.getItem('games');
+  if (savedGames) {
+    appState.games = JSON.parse(savedGames);
+  }
+  
+  // Load bets from localStorage
+  const savedBets = localStorage.getItem('bets');
+  if (savedBets) {
+    appState.bets = JSON.parse(savedBets);
+  }
+  
+  renderGamesTable();
+  updateGameSelect();
+  renderBetsTable();
 }
 
 // Initialize on page load
