@@ -85,6 +85,8 @@ window.logoutAdmin = function () {
 window.addGame = function (event) {
   event.preventDefault();
   
+  console.log("addGame chamada - iniciando");
+  
   if (!appState.isAdmin) {
     notify("❌ Acesso negado!", 'error');
     return;
@@ -93,12 +95,25 @@ window.addGame = function (event) {
   const gameName = document.getElementById("gameName").value.trim();
   const homeTeam = document.getElementById("homeTeam").value.trim();
   const awayTeam = document.getElementById("awayTeam").value.trim();
-  const homeOdd = parseFloat(document.getElementById("homeOdd").value);
-  const drawOdd = parseFloat(document.getElementById("drawOdd").value);
-  const awayOdd = parseFloat(document.getElementById("awayOdd").value);
+  const homeOddValue = document.getElementById("homeOdd").value;
+  const drawOddValue = document.getElementById("drawOdd").value;
+  const awayOddValue = document.getElementById("awayOdd").value;
+  
+  console.log("Valores:", { gameName, homeTeam, awayTeam, homeOddValue, drawOddValue, awayOddValue });
 
-  if (!gameName || !homeTeam || !awayTeam || homeOdd < 1.01 || drawOdd < 1.01 || awayOdd < 1.01) {
-    notify("❌ Preencha todos os campos com valores válidos!", 'error');
+  if (!gameName || !homeTeam || !awayTeam) {
+    notify("❌ Preencha todos os campos de texto!", 'error');
+    return;
+  }
+
+  const homeOdd = parseFloat(homeOddValue);
+  const drawOdd = parseFloat(drawOddValue);
+  const awayOdd = parseFloat(awayOddValue);
+  
+  console.log("Odds parseadas:", { homeOdd, drawOdd, awayOdd });
+
+  if (isNaN(homeOdd) || isNaN(drawOdd) || isNaN(awayOdd) || homeOdd < 1.01 || drawOdd < 1.01 || awayOdd < 1.01) {
+    notify("❌ Odds devem ser números maiores que 1.01!", 'error');
     return;
   }
 
@@ -117,35 +132,18 @@ window.addGame = function (event) {
     created: new Date().toISOString()
   };
 
-  // Save to Firebase with localStorage fallback
-  try {
-    set(ref(database, `games/${gameId}`), gameData)
-      .then(() => {
-        notify("✔️ Jogo adicionado com sucesso!", 'success');
-        document.getElementById("addGameForm").reset();
-        renderGamesTable();
-        updateGameSelect();
-      })
-      .catch((error) => {
-        console.warn("Firebase erro, usando localStorage:", error);
-        // Fallback to localStorage
-        appState.games.push(gameData);
-        localStorage.setItem('games', JSON.stringify(appState.games));
-        notify("✔️ Jogo adicionado com sucesso!", 'success');
-        document.getElementById("addGameForm").reset();
-        renderGamesTable();
-        updateGameSelect();
-      });
-  } catch (error) {
-    console.warn("Firebase não disponível, usando localStorage:", error);
-    // Fallback to localStorage
-    appState.games.push(gameData);
-    localStorage.setItem('games', JSON.stringify(appState.games));
-    notify("✔️ Jogo adicionado com sucesso!", 'success');
-    document.getElementById("addGameForm").reset();
-    renderGamesTable();
-    updateGameSelect();
-  }
+  console.log("gameData criado:", gameData);
+
+  // Usar localStorage diretamente (Firebase está com problemas)
+  appState.games.push(gameData);
+  localStorage.setItem('games', JSON.stringify(appState.games));
+  
+  notify("✔️ Jogo adicionado com sucesso!", 'success');
+  document.getElementById("addGameForm").reset();
+  renderGamesTable();
+  updateGameSelect();
+  
+  console.log("Jogo adicionado, appState.games:", appState.games.length);
 };
 
 window.removeGame = function (gameId) {
@@ -155,15 +153,13 @@ window.removeGame = function (gameId) {
   }
 
   if (confirm("Tem certeza que deseja remover este jogo?")) {
-    remove(ref(database, `games/${gameId}`))
-      .then(() => {
-        notify("✔️ Jogo removido com sucesso!", 'success');
-        renderGamesTable();
-        updateGameSelect();
-      })
-      .catch((error) => {
-        notify("❌ Erro ao remover jogo: " + error.message, 'error');
-      });
+    // Remove do localStorage
+    appState.games = appState.games.filter(game => game.id !== gameId);
+    localStorage.setItem('games', JSON.stringify(appState.games));
+    
+    notify("✔️ Jogo removido com sucesso!", 'success');
+    renderGamesTable();
+    updateGameSelect();
   }
 };
 
