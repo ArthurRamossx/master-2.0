@@ -1,0 +1,56 @@
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+let appState = { isAdmin: false, selectedGameId: "", selectedBetType: "", games: [], bets: [] };
+const ADMIN_PASSWORD = "MASTER2025";
+const BET_LIMITS = { MIN: 500000, MAX: 5000000 };
+
+const Utils = {
+  generateId: () => `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+  formatCurrency: (num) => `€${Number(num).toLocaleString("pt-BR")}`,
+  show: (el) => el.classList.remove("hidden"),
+  hide: (el) => el.classList.add("hidden"),
+};
+
+function notify(msg) {
+  const box = document.getElementById("notification");
+  document.getElementById("notificationText").textContent = msg;
+  Utils.show(box);
+  setTimeout(() => Utils.hide(box), 3000);
+}
+window.closeNotification = () => Utils.hide(document.getElementById("notification"));
+
+window.loginAdmin = function () {
+  const pass = document.getElementById("adminPassword").value;
+  if (pass === ADMIN_PASSWORD) {
+    appState.isAdmin = true;
+    localStorage.setItem("isAdminSession", "true");
+    Utils.show(document.getElementById("adminPanel"));
+    Utils.hide(document.getElementById("adminLogin"));
+    renderGamesTable();
+    renderBetsTable();
+    notify("✔️ Login admin bem-sucedido!");
+  } else {
+    notify("❌ Senha incorreta!");
+  }
+};
+
+window.logoutAdmin = function () {
+  appState.isAdmin = false;
+  localStorage.removeItem("isAdminSession");
+  Utils.hide(document.getElementById("adminPanel"));
+  Utils.show(document.getElementById("adminLogin"));
+  notify("⚠️ Logout realizado.");
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (localStorage.getItem("isAdminSession") === "true") {
+    appState.isAdmin = true;
+    Utils.show(document.getElementById("adminPanel"));
+    Utils.hide(document.getElementById("adminLogin"));
+    renderGamesTable();
+    renderBetsTable();
+  }
+});
+
+window.formatBetAmount

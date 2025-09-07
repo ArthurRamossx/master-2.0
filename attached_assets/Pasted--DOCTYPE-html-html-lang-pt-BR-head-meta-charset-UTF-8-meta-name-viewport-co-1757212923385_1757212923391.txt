@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MASTER LEAGUE - Casa de Apostas eFootball 2026</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>🏆 MASTER LEAGUE</h1>
+      <p>Casa de Apostas — eFootball 2026</p>
+    </header>
+
+    <!-- Login Admin -->
+    <section id="adminLogin" class="card">
+      <h2>🔐 Acesso Administrativo</h2>
+      <div class="form-group">
+        <label for="adminPassword">Senha de Administrador</label>
+        <input type="password" id="adminPassword" placeholder="Digite a senha" autocomplete="current-password" />
+      </div>
+      <button class="btn" onclick="loginAdmin()">Entrar como Administrador</button>
+    </section>
+
+    <!-- Painel Admin -->
+    <section id="adminPanel" class="card hidden">
+      <div class="admin-panel-header">
+        <h2>⚙️ Painel Administrativo</h2>
+        <button class="btn btn-danger" onclick="logoutAdmin()">Sair</button>
+      </div>
+
+      <div class="admin-section">
+        <h3>Adicionar Novo Jogo</h3>
+        <form id="addGameForm" onsubmit="addGame(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="gameName">Nome do Jogo</label>
+              <input type="text" id="gameName" required />
+            </div>
+            <div class="form-group">
+              <label for="homeTeam">Time da Casa</label>
+              <input type="text" id="homeTeam" required />
+            </div>
+            <div class="form-group">
+              <label for="awayTeam">Time de Fora</label>
+              <input type="text" id="awayTeam" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="homeOdd">Odd Casa</label>
+              <input type="number" id="homeOdd" step="0.01" min="1.01" required />
+            </div>
+            <div class="form-group">
+              <label for="drawOdd">Odd Empate</label>
+              <input type="number" id="drawOdd" step="0.01" min="1.01" required />
+            </div>
+            <div class="form-group">
+              <label for="awayOdd">Odd Fora</label>
+              <input type="number" id="awayOdd" step="0.01" min="1.01" required />
+            </div>
+            <div class="form-group">
+              <button type="submit" class="btn btn-success">➕ Adicionar Jogo</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="admin-section">
+        <h3>🎮 Jogos Ativos</h3>
+        <div class="table-container">
+          <table id="gamesTable">
+            <thead>
+              <tr>
+                <th>Jogo</th>
+                <th>Times</th>
+                <th>Casa</th>
+                <th>Empate</th>
+                <th>Fora</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="admin-section">
+        <h3>📊 Relatório de Apostas</h3>
+        <div class="table-container">
+          <table id="betsTable">
+            <thead>
+              <tr>
+                <th>Jogador</th>
+                <th>Jogo</th>
+                <th>Aposta</th>
+                <th>Valor (€)</th>
+                <th>Odd</th>
+                <th>Possível Ganho (€)</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Área de apostas -->
+    <section id="betSection" class="card">
+      <h2>🎯 Fazer Aposta</h2>
+      <form id="betForm" onsubmit="placeBet(event)">
+        <div class="form-group">
+          <label for="playerName">Seu Nome</label>
+          <input type="text" id="playerName" required />
+        </div>
+
+        <div class="form-group">
+          <label for="gameSelect">Jogo Disponível</label>
+          <select id="gameSelect" onchange="selectGame()" required>
+            <option value="">Selecione um jogo...</option>
+          </select>
+        </div>
+
+        <div id="oddsContainer" class="hidden">
+          <label>Escolha seu palpite</label>
+          <div class="odds-container" id="oddsButtons"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="betAmount">Valor da Aposta</label>
+          <input type="text" id="betAmount" placeholder="Min: €500.000 - Max: €5.000.000" oninput="formatBetAmount(this)" required />
+          <small>💡 Limite: €500.000 a €5.000.000</small>
+        </div>
+
+        <div id="possibleWinDisplay" class="possible-win hidden">
+          <div class="label">Possível Ganho:</div>
+          <div class="amount" id="possibleWinAmount">€0,00</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary">💰 Confirmar Aposta</button>
+      </form>
+    </section>
+  </div>
+
+  <div id="notification" class="notification hidden">
+    <span id="notificationText"></span>
+    <button onclick="closeNotification()" class="notification-close">×</button>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
