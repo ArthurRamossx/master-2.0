@@ -90,7 +90,17 @@
       </div>
 
       <div class="admin-section">
-        <h3>📊 Relatório de Apostas</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h3>📊 Relatório de Apostas</h3>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-warning" onclick="generatePDFReport()" style="padding: 8px 16px; font-size: 0.9rem;">
+              📄 Gerar PDF
+            </button>
+            <button class="btn btn-primary" onclick="generateWordReport()" style="padding: 8px 16px; font-size: 0.9rem;">
+              📝 Gerar Word
+            </button>
+          </div>
+        </div>
         <div class="table-container">
           <table id="betsTable">
             <thead>
