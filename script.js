@@ -1,13 +1,13 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
 import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
-// Firebase configuration - using environment variable fallback
+// Firebase configuration - configuração de desenvolvimento
 const firebaseConfig = {
-  apiKey: "AIzaSyDemoKey123456789",
-  authDomain: "master-league-demo.firebaseapp.com",
-  databaseURL: "https://master-league-demo-default-rtdb.firebaseio.com/",
-  projectId: "master-league-demo",
-  storageBucket: "master-league-demo.appspot.com",
+  apiKey: "AIzaSyC-UdxQ9KqX8r7ZGNj2P1eTMXiYcKcQFdM",
+  authDomain: "master-league-bets.firebaseapp.com",
+  databaseURL: "https://master-league-bets-default-rtdb.firebaseio.com/",
+  projectId: "master-league-bets",
+  storageBucket: "master-league-bets.appspot.com",
   messagingSenderId: "123456789",
   appId: "1:123456789:web:abcdef123456"
 };
