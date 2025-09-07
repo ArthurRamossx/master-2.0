@@ -474,6 +474,87 @@ document.addEventListener("DOMContentLoaded", () => {
   notify("🚀 Sistema carregado com sucesso!", 'success');
 });
 
+// Report generation functions
+window.generatePDFReport = async function() {
+  if (!appState.isAdmin) {
+    notify("❌ Acesso negado!", 'error');
+    return;
+  }
+
+  try {
+    notify("📄 Gerando relatório PDF...", 'info');
+    
+    const response = await fetch('/generate-pdf-report', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        bets: appState.bets,
+        games: appState.games
+      })
+    });
+
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `relatorio_apostas_${new Date().toISOString().slice(0,10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      notify("✔️ Relatório PDF gerado com sucesso!", 'success');
+    } else {
+      throw new Error('Erro ao gerar PDF');
+    }
+  } catch (error) {
+    notify("❌ Erro ao gerar relatório PDF: " + error.message, 'error');
+  }
+};
+
+window.generateWordReport = async function() {
+  if (!appState.isAdmin) {
+    notify("❌ Acesso negado!", 'error');
+    return;
+  }
+
+  try {
+    notify("📝 Gerando relatório Word...", 'info');
+    
+    const response = await fetch('/generate-word-report', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        bets: appState.bets,
+        games: appState.games
+      })
+    });
+
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = `relatorio_apostas_${new Date().toISOString().slice(0,10)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      notify("✔️ Relatório Word gerado com sucesso!", 'success');
+    } else {
+      throw new Error('Erro ao gerar Word');
+    }
+  } catch (error) {
+    notify("❌ Erro ao gerar relatório Word: " + error.message, 'error');
+  }
+};
+
 // Error handling for Firebase connection
 window.addEventListener('error', (e) => {
   if (e.message.includes('Firebase')) {
