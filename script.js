@@ -32,10 +32,10 @@ const Utils = {
   generateId: () => `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
   formatCurrency: (num) => {
     const number = Number(num);
-    return `€${number.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `€${number.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   },
   parseCurrency: (str) => {
-    return parseFloat(str.replace(/[€\s.]/g, '').replace(',', '.')) || 0;
+    return parseFloat(str.replace(/[€\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
   },
   show: (el) => el.classList.remove("hidden"),
   hide: (el) => el.classList.add("hidden"),
@@ -206,9 +206,10 @@ window.formatBetAmount = function (input) {
   let value = input.value.replace(/[^\d]/g, '');
   
   if (value) {
-    // Convert to number and format as currency
+    // Convert to number and format with Brazilian punctuation
     const numValue = parseInt(value);
-    input.value = Utils.formatCurrency(numValue);
+    const formatted = numValue.toLocaleString("pt-BR");
+    input.value = formatted;
   }
   
   calculatePossibleWin();
@@ -219,7 +220,8 @@ function calculatePossibleWin() {
   const possibleWinDisplay = document.getElementById("possibleWinDisplay");
   const possibleWinAmount = document.getElementById("possibleWinAmount");
   
-  const betAmount = Utils.parseCurrency(betAmountInput.value);
+  // Parse Brazilian formatted number
+  const betAmount = parseFloat(betAmountInput.value.replace(/\./g, '').replace(',', '.')) || 0;
   
   if (betAmount > 0 && appState.selectedOdd > 0) {
     const possibleWin = betAmount * appState.selectedOdd;
@@ -237,7 +239,7 @@ window.placeBet = function (event) {
   const gameId = appState.selectedGameId;
   const betType = appState.selectedBetType;
   const betAmountStr = document.getElementById("betAmount").value;
-  const betAmount = Utils.parseCurrency(betAmountStr);
+  const betAmount = parseFloat(betAmountStr.replace(/\./g, '').replace(',', '.')) || 0;
   
   // Validation
   if (!playerName) {
