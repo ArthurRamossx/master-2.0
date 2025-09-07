@@ -97,7 +97,7 @@ def generate_pdf_report():
             # Agrupar apostas por jogador
             players_data = {}
             for bet in bets:
-                player_name = bet.get('playerName', 'Desconhecido')
+                player_name = bet.get('player', 'Desconhecido')
                 if player_name not in players_data:
                     players_data[player_name] = {
                         'total_apostado': 0,
@@ -109,7 +109,7 @@ def generate_pdf_report():
                     }
                 
                 player_data = players_data[player_name]
-                player_data['total_apostado'] += bet.get('betAmount', 0)
+                player_data['total_apostado'] += bet.get('amount', 0)
                 player_data['total_possivel'] += bet.get('possibleWin', 0)
                 player_data['apostas'].append(bet)
                 
@@ -165,9 +165,9 @@ def generate_pdf_report():
                 
                 for bet in player_info['apostas']:
                     bet_type_text = ''
-                    if bet.get('betType') == 'home':
+                    if bet.get('type') == 'home':
                         bet_type_text = bet.get('gameDetails', {}).get('homeTeam', 'Casa')
-                    elif bet.get('betType') == 'away':
+                    elif bet.get('type') == 'away':
                         bet_type_text = bet.get('gameDetails', {}).get('awayTeam', 'Fora')
                     else:
                         bet_type_text = 'Empate'
@@ -190,7 +190,7 @@ def generate_pdf_report():
                     apostas_data.append([
                         bet.get('gameName', ''),
                         bet_type_text,
-                        f"€{bet.get('betAmount', 0):,.2f}".replace(',', '.'),
+                        f"€{bet.get('amount', 0):,.2f}".replace(',', '.'),
                         str(bet.get('odd', 0)),
                         f"€{bet.get('possibleWin', 0):,.2f}".replace(',', '.'),
                         status_text,
@@ -268,7 +268,7 @@ def generate_word_report():
         doc.add_heading('Resumo Geral', level=1)
         
         total_bets = len(bets)
-        total_amount = sum(bet.get('betAmount', 0) for bet in bets)
+        total_amount = sum(bet.get('amount', 0) for bet in bets)
         pending_bets = len([bet for bet in bets if bet.get('status') == 'pending'])
         won_bets = len([bet for bet in bets if bet.get('status') == 'won'])
         lost_bets = len([bet for bet in bets if bet.get('status') == 'lost'])
@@ -308,9 +308,9 @@ def generate_word_report():
                 row = table.add_row()
                 
                 bet_type_text = ''
-                if bet.get('betType') == 'home':
+                if bet.get('type') == 'home':
                     bet_type_text = bet.get('gameDetails', {}).get('homeTeam', 'Casa')
-                elif bet.get('betType') == 'away':
+                elif bet.get('type') == 'away':
                     bet_type_text = bet.get('gameDetails', {}).get('awayTeam', 'Fora')
                 else:
                     bet_type_text = 'Empate'
@@ -321,10 +321,10 @@ def generate_word_report():
                     'lost': 'Perdeu'
                 }.get(bet.get('status', 'pending'), 'Pendente')
                 
-                row.cells[0].text = bet.get('playerName', '')
+                row.cells[0].text = bet.get('player', '')
                 row.cells[1].text = bet.get('gameName', '')
                 row.cells[2].text = bet_type_text
-                row.cells[3].text = f"€{bet.get('betAmount', 0):,.2f}".replace(',', '.')
+                row.cells[3].text = f"€{bet.get('amount', 0):,.2f}".replace(',', '.')
                 row.cells[4].text = str(bet.get('odd', 0))
                 row.cells[5].text = status_text
         

@@ -1,0 +1,62 @@
+Prompt para correção de Firebase no projeto de apostas
+Olá! Preciso que você revise e corrija todos os pontos relacionados à integração com o Firebase Realtime Database no projeto ApostaOnline. O sistema está apresentando os seguintes problemas:
+
+As apostas somem ao recarregar a página
+
+As apostas não aparecem em outros dispositivos ou abas abertas
+
+O painel admin não mostra apostas pendentes corretamente
+
+Aqui está o que precisa ser ajustado:
+
+✅ 1. Salvamento correto das apostas
+Verifique se a função placeBet está salvando os dados no Firebase com set(ref(db, ...))
+
+O objeto da aposta deve conter: id, player, gameId, type, amount, status
+
+javascript
+set(ref(db, `bets/${bet.id}`), bet);
+✅ 2. Leitura em tempo real das apostas
+Certifique-se de que existe um listener onValue ativo para o caminho bets
+
+Esse listener deve atualizar appState.bets e chamar renderBetsTable() sempre que houver mudanças
+
+javascript
+onValue(ref(db, "bets"), (snap) => {
+  const data = snap.val();
+  appState.bets = data ? Object.values(data) : [];
+  renderBetsTable();
+});
+✅ 3. Regras do Firebase liberadas para leitura/escrita
+No painel do Firebase, vá em Realtime Database → Rules e aplique:
+
+json
+{
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}
+Isso garante que qualquer usuário possa ler e gravar dados durante o desenvolvimento. Depois podemos restringir por autenticação.
+
+✅ 4. Persistência da sessão admin
+Verifique se o login admin está sendo salvo no localStorage e restaurado corretamente no DOMContentLoaded
+
+javascript
+if (localStorage.getItem("isAdminSession") === "true") {
+  appState.isAdmin = true;
+  Utils.show(document.getElementById("adminPanel"));
+  Utils.hide(document.getElementById("adminLogin"));
+  renderGamesTable();
+  renderBetsTable();
+}
+✅ 5. Teste cruzado entre dispositivos
+Após corrigir os pontos acima, teste:
+
+Fazer uma aposta no dispositivo A
+
+Ver se ela aparece no painel admin no dispositivo B
+
+Recarregar a página e confirmar que os dados persistem
+
+Se possível, revise também a estrutura do script.js para garantir que não há duplicação de funções, conflitos de escopo ou erros de sintaxe que impeçam o carregamento dos listeners.

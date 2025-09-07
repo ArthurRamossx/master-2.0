@@ -134,16 +134,17 @@ window.addGame = function (event) {
 
   console.log("gameData criado:", gameData);
 
-  // Usar localStorage diretamente (Firebase está com problemas)
-  appState.games.push(gameData);
-  localStorage.setItem('games', JSON.stringify(appState.games));
-  
-  notify("✔️ Jogo adicionado com sucesso!", 'success');
-  document.getElementById("addGameForm").reset();
-  renderGamesTable();
-  updateGameSelect();
-  
-  console.log("Jogo adicionado, appState.games:", appState.games.length);
+  // Save to Firebase
+  set(ref(database, `games/${gameId}`), gameData)
+    .then(() => {
+      console.log("Jogo salvo com sucesso no Firebase");
+      notify("✔️ Jogo adicionado com sucesso!", 'success');
+      document.getElementById("addGameForm").reset();
+    })
+    .catch((error) => {
+      console.error("Erro ao salvar jogo no Firebase:", error);
+      notify("❌ Erro ao adicionar jogo: " + error.message, 'error');
+    });
 };
 
 window.removeGame = function (gameId) {
@@ -153,13 +154,15 @@ window.removeGame = function (gameId) {
   }
 
   if (confirm("Tem certeza que deseja remover este jogo?")) {
-    // Remove do localStorage
-    appState.games = appState.games.filter(game => game.id !== gameId);
-    localStorage.setItem('games', JSON.stringify(appState.games));
-    
-    notify("✔️ Jogo removido com sucesso!", 'success');
-    renderGamesTable();
-    updateGameSelect();
+    remove(ref(database, `games/${gameId}`))
+      .then(() => {
+        console.log("Jogo removido com sucesso do Firebase");
+        notify("✔️ Jogo removido com sucesso!", 'success');
+      })
+      .catch((error) => {
+        console.error("Erro ao remover jogo do Firebase:", error);
+        notify("❌ Erro ao remover jogo: " + error.message, 'error');
+      });
   }
 };
 
@@ -285,11 +288,11 @@ window.placeBet = function (event) {
   const betId = Utils.generateId();
   const betData = {
     id: betId,
-    playerName: playerName,
+    player: playerName,
     gameId: gameId,
     gameName: game.name,
-    betType: betType,
-    betAmount: betAmount,
+    type: betType,
+    amount: betAmount,
     odd: appState.selectedOdd,
     possibleWin: betAmount * appState.selectedOdd,
     status: 'pending',
@@ -300,47 +303,24 @@ window.placeBet = function (event) {
     }
   };
 
-  // Save to Firebase with localStorage fallback
-  try {
-    set(ref(database, `bets/${betId}`), betData)
-      .then(() => {
-        notify("✔️ Aposta realizada com sucesso!", 'success');
-        document.getElementById("betForm").reset();
-        appState.selectedGameId = "";
-        appState.selectedBetType = "";
-        appState.selectedOdd = 0;
-        Utils.hide(document.getElementById("oddsContainer"));
-        Utils.hide(document.getElementById("possibleWinDisplay"));
-        renderBetsTable();
-      })
-      .catch((error) => {
-        console.warn("Firebase erro, usando localStorage:", error);
-        // Fallback to localStorage
-        appState.bets.push(betData);
-        localStorage.setItem('bets', JSON.stringify(appState.bets));
-        notify("✔️ Aposta realizada com sucesso!", 'success');
-        document.getElementById("betForm").reset();
-        appState.selectedGameId = "";
-        appState.selectedBetType = "";
-        appState.selectedOdd = 0;
-        Utils.hide(document.getElementById("oddsContainer"));
-        Utils.hide(document.getElementById("possibleWinDisplay"));
-        renderBetsTable();
-      });
-  } catch (error) {
-    console.warn("Firebase não disponível, usando localStorage:", error);
-    // Fallback to localStorage
-    appState.bets.push(betData);
-    localStorage.setItem('bets', JSON.stringify(appState.bets));
-    notify("✔️ Aposta realizada com sucesso!", 'success');
-    document.getElementById("betForm").reset();
-    appState.selectedGameId = "";
-    appState.selectedBetType = "";
-    appState.selectedOdd = 0;
-    Utils.hide(document.getElementById("oddsContainer"));
-    Utils.hide(document.getElementById("possibleWinDisplay"));
-    renderBetsTable();
-  }
+  console.log("Salvando aposta no Firebase:", betData);
+
+  // Save to Firebase
+  set(ref(database, `bets/${betId}`), betData)
+    .then(() => {
+      console.log("Aposta salva com sucesso no Firebase");
+      notify("✔️ Aposta realizada com sucesso!", 'success');
+      document.getElementById("betForm").reset();
+      appState.selectedGameId = "";
+      appState.selectedBetType = "";
+      appState.selectedOdd = 0;
+      Utils.hide(document.getElementById("oddsContainer"));
+      Utils.hide(document.getElementById("possibleWinDisplay"));
+    })
+    .catch((error) => {
+      console.error("Erro ao salvar aposta no Firebase:", error);
+      notify("❌ Erro ao realizar aposta: " + error.message, 'error');
+    });
 };
 
 // Bet management for admin
@@ -353,10 +333,11 @@ window.updateBetStatus = function (betId, status) {
   const betRef = ref(database, `bets/${betId}/status`);
   set(betRef, status)
     .then(() => {
+      console.log(`Status da aposta ${betId} atualizado para: ${status}`);
       notify(`✔️ Status da aposta atualizado para: ${status}`, 'success');
-      renderBetsTable();
     })
     .catch((error) => {
+      console.error("Erro ao atualizar status:", error);
       notify("❌ Erro ao atualizar status: " + error.message, 'error');
     });
 };
@@ -370,10 +351,11 @@ window.removeBet = function (betId) {
   if (confirm("Tem certeza que deseja remover esta aposta?")) {
     remove(ref(database, `bets/${betId}`))
       .then(() => {
+        console.log(`Aposta ${betId} removida com sucesso`);
         notify("✔️ Aposta removida com sucesso!", 'success');
-        renderBetsTable();
       })
       .catch((error) => {
+        console.error("Erro ao remover aposta:", error);
         notify("❌ Erro ao remover aposta: " + error.message, 'error');
       });
   }
@@ -429,14 +411,14 @@ function renderBetsTable() {
 
   appState.bets.forEach(bet => {
     const row = tbody.insertRow();
-    const betTypeText = bet.betType === 'home' ? bet.gameDetails.homeTeam : 
-                       bet.betType === 'away' ? bet.gameDetails.awayTeam : 'Empate';
+    const betTypeText = bet.type === 'home' ? bet.gameDetails.homeTeam : 
+                       bet.type === 'away' ? bet.gameDetails.awayTeam : 'Empate';
     
     row.innerHTML = `
-      <td>${bet.playerName}</td>
+      <td>${bet.player}</td>
       <td>${bet.gameName}</td>
       <td>${betTypeText}</td>
-      <td>${Utils.formatCurrency(bet.betAmount)}</td>
+      <td>${Utils.formatCurrency(bet.amount)}</td>
       <td>${bet.odd}</td>
       <td>${Utils.formatCurrency(bet.possibleWin)}</td>
       <td>
@@ -472,53 +454,34 @@ function updateGameSelect() {
   });
 }
 
-// Firebase listeners with localStorage fallback
+// Firebase listeners em tempo real
 function initializeFirebaseListeners() {
-  try {
-    // Listen to games
-    const gamesRef = ref(database, 'games');
-    onValue(gamesRef, (snapshot) => {
-      const data = snapshot.val();
-      appState.games = data ? Object.values(data) : [];
-      renderGamesTable();
-      updateGameSelect();
-    }, (error) => {
-      console.warn("Firebase games listener erro, usando localStorage:", error);
-      loadFromLocalStorage();
-    });
-
-    // Listen to bets
-    const betsRef = ref(database, 'bets');
-    onValue(betsRef, (snapshot) => {
-      const data = snapshot.val();
-      appState.bets = data ? Object.values(data) : [];
-      renderBetsTable();
-    }, (error) => {
-      console.warn("Firebase bets listener erro, usando localStorage:", error);
-      loadFromLocalStorage();
-    });
-  } catch (error) {
-    console.warn("Firebase não disponível, usando localStorage:", error);
-    loadFromLocalStorage();
-  }
-}
-
-function loadFromLocalStorage() {
-  // Load games from localStorage
-  const savedGames = localStorage.getItem('games');
-  if (savedGames) {
-    appState.games = JSON.parse(savedGames);
-  }
+  console.log("Inicializando listeners do Firebase...");
   
-  // Load bets from localStorage
-  const savedBets = localStorage.getItem('bets');
-  if (savedBets) {
-    appState.bets = JSON.parse(savedBets);
-  }
-  
-  renderGamesTable();
-  updateGameSelect();
-  renderBetsTable();
+  // Listen to games em tempo real
+  const gamesRef = ref(database, 'games');
+  onValue(gamesRef, (snapshot) => {
+    console.log("Games listener ativado");
+    const data = snapshot.val();
+    appState.games = data ? Object.values(data) : [];
+    console.log("Games carregados:", appState.games.length);
+    renderGamesTable();
+    updateGameSelect();
+  }, (error) => {
+    console.error("Erro no listener de games:", error);
+  });
+
+  // Listen to bets em tempo real
+  const betsRef = ref(database, 'bets');
+  onValue(betsRef, (snapshot) => {
+    console.log("Bets listener ativado");
+    const data = snapshot.val();
+    appState.bets = data ? Object.values(data) : [];
+    console.log("Apostas carregadas:", appState.bets.length);
+    renderBetsTable();
+  }, (error) => {
+    console.error("Erro no listener de apostas:", error);
+  });
 }
 
 // Initialize on page load
