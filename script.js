@@ -1,19 +1,4 @@
-// MASTER LEAGUE - Sistema de Apostas eFootball 2026
-// Imports do Firebase (ES6 modules)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getDatabase, ref, onValue, set, remove, push } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
-
-// Configuração Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyC-UdxQ9KqX8r7ZGNj2P1eTMXiYcKcQFdM",
-  authDomain: "master-league-bets.firebaseapp.com",
-  databaseURL: "https://master-league-bets-default-rtdb.firebaseio.com/",
-  projectId: "master-league-bets",
-  storageBucket: "master-league-bets.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
-};
-
+// MASTER LEAGUE - Sistema de Apostas com Banco de Dados Real
 // Estado global da aplicação
 let appState = {
   isAdmin: false,
@@ -27,20 +12,6 @@ let appState = {
 // Constantes
 const ADMIN_PASSWORD = "MASTER2025";
 const BET_LIMITS = { MIN: 500000, MAX: 5000000 };
-
-// Inicializar Firebase
-let app, database;
-let useFirebase = false;
-
-try {
-  app = initializeApp(firebaseConfig);
-  database = getDatabase(app);
-  useFirebase = true;
-  console.log("✅ Firebase conectado com sucesso");
-} catch (error) {
-  console.warn("⚠️ Firebase não disponível, usando localStorage:", error.message);
-  useFirebase = false;
-}
 
 // Utilitários
 const Utils = {
@@ -83,6 +54,29 @@ window.closeNotification = () => {
   Utils.hide(document.getElementById("notification"));
 };
 
+// API CALLS
+
+async function apiCall(url, options = {}) {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error(`API Error (${url}):`, error);
+    throw error;
+  }
+}
+
 // FUNÇÕES DE ADMINISTRAÇÃO
 
 window.loginAdmin = function() {
@@ -117,7 +111,7 @@ window.logoutAdmin = function() {
 
 // GERENCIAMENTO DE JOGOS
 
-window.addGame = function(event) {
+window.addGame = async function(event) {
   event.preventDefault();
   
   if (!appState.isAdmin) {
@@ -144,30 +138,34 @@ window.addGame = function(event) {
     return;
   }
   
-  // Criar novo jogo
-  const gameId = Utils.generateId();
-  const newGame = {
-    id: gameId,
-    name: gameName,
-    homeTeam: homeTeam,
-    awayTeam: awayTeam,
-    odds: {
-      home: homeOdd,
-      draw: drawOdd,
-      away: awayOdd
-    },
-    status: 'active',
-    createdAt: new Date().toISOString()
-  };
-  
-  // Salvar jogo
-  saveGame(newGame);
-  
-  // Limpar formulário
-  document.getElementById("addGameForm").reset();
+  try {
+    const gameData = {
+      id: Utils.generateId(),
+      name: gameName,
+      homeTeam: homeTeam,
+      awayTeam: awayTeam,
+      odds: {
+        home: homeOdd,
+        draw: drawOdd,
+        away: awayOdd
+      },
+      status: 'active'
+    };
+    
+    await apiCall('/api/games', {
+      method: 'POST',
+      body: JSON.stringify(gameData)
+    });
+    
+    document.getElementById("addGameForm").reset();
+    loadGames();
+    showNotification("✅ Jogo adicionado com sucesso!", 'success');
+  } catch (error) {
+    showNotification(`❌ Erro ao adicionar jogo: ${error.message}`, 'error');
+  }
 };
 
-window.removeGame = function(gameId) {
+window.removeGame = async function(gameId) {
   if (!appState.isAdmin) {
     showNotification("❌ Acesso negado!", 'error');
     return;
@@ -177,7 +175,13 @@ window.removeGame = function(gameId) {
     return;
   }
   
-  deleteGame(gameId);
+  try {
+    await apiCall(`/api/games/${gameId}`, { method: 'DELETE' });
+    loadGames();
+    showNotification("✅ Jogo removido com sucesso!", 'success');
+  } catch (error) {
+    showNotification(`❌ Erro ao remover jogo: ${error.message}`, 'error');
+  }
 };
 
 // SISTEMA DE APOSTAS
@@ -263,7 +267,7 @@ function calculatePossibleWin() {
   }
 }
 
-window.placeBet = function(event) {
+window.placeBet = async function(event) {
   event.preventDefault();
   
   const playerName = document.getElementById("playerName").value.trim();
@@ -298,55 +302,64 @@ window.placeBet = function(event) {
     return;
   }
   
-  // Criar aposta
-  const betId = Utils.generateId();
-  const newBet = {
-    id: betId,
-    player: playerName,
-    gameId: gameId,
-    gameName: game.name,
-    type: betType,
-    amount: betAmount,
-    odd: appState.selectedOdd,
-    possibleWin: betAmount * appState.selectedOdd,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-    gameDetails: {
-      homeTeam: game.homeTeam,
-      awayTeam: game.awayTeam
-    }
-  };
-  
-  // Salvar aposta
-  saveBet(newBet);
-  
-  // Reset do formulário
-  document.getElementById("betForm").reset();
-  appState.selectedGameId = "";
-  appState.selectedBetType = "";
-  appState.selectedOdd = 0;
-  Utils.hide(document.getElementById("oddsContainer"));
-  Utils.hide(document.getElementById("possibleWinDisplay"));
+  try {
+    const betData = {
+      id: Utils.generateId(),
+      player: playerName,
+      gameId: gameId,
+      gameName: game.name,
+      type: betType,
+      amount: betAmount,
+      odd: appState.selectedOdd,
+      possibleWin: betAmount * appState.selectedOdd,
+      gameDetails: {
+        homeTeam: game.homeTeam,
+        awayTeam: game.awayTeam
+      }
+    };
+    
+    await apiCall('/api/bets', {
+      method: 'POST',
+      body: JSON.stringify(betData)
+    });
+    
+    // Reset do formulário
+    document.getElementById("betForm").reset();
+    appState.selectedGameId = "";
+    appState.selectedBetType = "";
+    appState.selectedOdd = 0;
+    Utils.hide(document.getElementById("oddsContainer"));
+    Utils.hide(document.getElementById("possibleWinDisplay"));
+    
+    loadBets();
+    showNotification("✅ Aposta realizada com sucesso!", 'success');
+  } catch (error) {
+    showNotification(`❌ Erro ao realizar aposta: ${error.message}`, 'error');
+  }
 };
 
 // GERENCIAMENTO DE APOSTAS (ADMIN)
 
-window.updateBetStatus = function(betId, newStatus) {
+window.updateBetStatus = async function(betId, newStatus) {
   if (!appState.isAdmin) {
     showNotification("❌ Acesso negado!", 'error');
     return;
   }
   
-  const betIndex = appState.bets.findIndex(bet => bet.id === betId);
-  if (betIndex !== -1) {
-    appState.bets[betIndex].status = newStatus;
-    updateBetInStorage(betId, newStatus);
-    renderBetsTable();
+  try {
+    await apiCall(`/api/bets/${betId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: newStatus })
+    });
+    
+    loadBets();
     showNotification(`✅ Status da aposta atualizado para: ${newStatus}`, 'success');
+  } catch (error) {
+    showNotification(`❌ Erro ao atualizar aposta: ${error.message}`, 'error');
   }
 };
 
-window.removeBet = function(betId) {
+window.removeBet = async function(betId) {
   if (!appState.isAdmin) {
     showNotification("❌ Acesso negado!", 'error');
     return;
@@ -356,120 +369,42 @@ window.removeBet = function(betId) {
     return;
   }
   
-  deleteBet(betId);
+  try {
+    await apiCall(`/api/bets/${betId}`, { method: 'DELETE' });
+    loadBets();
+    showNotification("✅ Aposta removida com sucesso!", 'success');
+  } catch (error) {
+    showNotification(`❌ Erro ao remover aposta: ${error.message}`, 'error');
+  }
 };
 
-// FUNÇÕES DE PERSISTÊNCIA
+// FUNÇÕES DE CARREGAMENTO DE DADOS
 
-function saveGame(game) {
-  appState.games.push(game);
-  
-  if (useFirebase) {
-    set(ref(database, `games/${game.id}`), game)
-      .then(() => {
-        showNotification("✅ Jogo adicionado com sucesso!", 'success');
-      })
-      .catch(error => {
-        console.error("Erro Firebase:", error);
-        saveToLocalStorage();
-        showNotification("✅ Jogo adicionado (modo offline)!", 'success');
-      });
-  } else {
-    saveToLocalStorage();
-    showNotification("✅ Jogo adicionado com sucesso!", 'success');
-  }
-  
-  renderGamesTable();
-  updateGameSelect();
-}
-
-function deleteGame(gameId) {
-  appState.games = appState.games.filter(game => game.id !== gameId);
-  
-  if (useFirebase) {
-    remove(ref(database, `games/${gameId}`))
-      .then(() => {
-        showNotification("✅ Jogo removido com sucesso!", 'success');
-      })
-      .catch(error => {
-        console.error("Erro Firebase:", error);
-        saveToLocalStorage();
-        showNotification("✅ Jogo removido (modo offline)!", 'success');
-      });
-  } else {
-    saveToLocalStorage();
-    showNotification("✅ Jogo removido com sucesso!", 'success');
-  }
-  
-  renderGamesTable();
-  updateGameSelect();
-}
-
-function saveBet(bet) {
-  appState.bets.push(bet);
-  
-  if (useFirebase) {
-    set(ref(database, `bets/${bet.id}`), bet)
-      .then(() => {
-        showNotification("✅ Aposta realizada com sucesso!", 'success');
-      })
-      .catch(error => {
-        console.error("Erro Firebase:", error);
-        saveToLocalStorage();
-        showNotification("✅ Aposta realizada (modo offline)!", 'success');
-      });
-  } else {
-    saveToLocalStorage();
-    showNotification("✅ Aposta realizada com sucesso!", 'success');
-  }
-  
-  renderBetsTable();
-}
-
-function updateBetInStorage(betId, status) {
-  if (useFirebase) {
-    set(ref(database, `bets/${betId}/status`), status)
-      .catch(error => {
-        console.error("Erro Firebase:", error);
-        saveToLocalStorage();
-      });
-  } else {
-    saveToLocalStorage();
+async function loadGames() {
+  try {
+    const response = await apiCall('/api/games');
+    appState.games = response.games || [];
+    renderGamesTable();
+    updateGameSelect();
+  } catch (error) {
+    console.error('Erro ao carregar jogos:', error);
+    showNotification("❌ Erro ao carregar jogos", 'error');
   }
 }
 
-function deleteBet(betId) {
-  appState.bets = appState.bets.filter(bet => bet.id !== betId);
-  
-  if (useFirebase) {
-    remove(ref(database, `bets/${betId}`))
-      .then(() => {
-        showNotification("✅ Aposta removida com sucesso!", 'success');
-      })
-      .catch(error => {
-        console.error("Erro Firebase:", error);
-        saveToLocalStorage();
-        showNotification("✅ Aposta removida (modo offline)!", 'success');
-      });
-  } else {
-    saveToLocalStorage();
-    showNotification("✅ Aposta removida com sucesso!", 'success');
+async function loadBets() {
+  try {
+    const response = await apiCall('/api/bets');
+    appState.bets = response.bets || [];
+    renderBetsTable();
+  } catch (error) {
+    console.error('Erro ao carregar apostas:', error);
+    showNotification("❌ Erro ao carregar apostas", 'error');
   }
-  
-  renderBetsTable();
 }
 
-function saveToLocalStorage() {
-  localStorage.setItem('games', JSON.stringify(appState.games));
-  localStorage.setItem('bets', JSON.stringify(appState.bets));
-}
-
-function loadFromLocalStorage() {
-  const games = localStorage.getItem('games');
-  const bets = localStorage.getItem('bets');
-  
-  if (games) appState.games = JSON.parse(games);
-  if (bets) appState.bets = JSON.parse(bets);
+async function loadData() {
+  await Promise.all([loadGames(), loadBets()]);
 }
 
 // RENDERIZAÇÃO
@@ -588,42 +523,6 @@ function updateGameSelect() {
   });
 }
 
-// CARREGAMENTO DE DADOS
-
-function loadData() {
-  if (useFirebase) {
-    // Listeners em tempo real
-    const gamesRef = ref(database, 'games');
-    onValue(gamesRef, (snapshot) => {
-      const data = snapshot.val();
-      appState.games = data ? Object.values(data) : [];
-      renderGamesTable();
-      updateGameSelect();
-    }, (error) => {
-      console.warn("Erro ao carregar jogos do Firebase:", error);
-      loadFromLocalStorage();
-      renderGamesTable();
-      updateGameSelect();
-    });
-    
-    const betsRef = ref(database, 'bets');
-    onValue(betsRef, (snapshot) => {
-      const data = snapshot.val();
-      appState.bets = data ? Object.values(data) : [];
-      renderBetsTable();
-    }, (error) => {
-      console.warn("Erro ao carregar apostas do Firebase:", error);
-      loadFromLocalStorage();
-      renderBetsTable();
-    });
-  } else {
-    loadFromLocalStorage();
-    renderGamesTable();
-    updateGameSelect();
-    renderBetsTable();
-  }
-}
-
 // RELATÓRIOS
 
 window.generatePDFReport = async function() {
@@ -637,11 +536,7 @@ window.generatePDFReport = async function() {
     
     const response = await fetch('/generate-pdf-report', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        bets: appState.bets,
-        games: appState.games
-      })
+      headers: { 'Content-Type': 'application/json' }
     });
     
     if (response.ok) {
@@ -672,11 +567,7 @@ window.generateWordReport = async function() {
     
     const response = await fetch('/generate-word-report', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        bets: appState.bets,
-        games: appState.games
-      })
+      headers: { 'Content-Type': 'application/json' }
     });
     
     if (response.ok) {
@@ -696,10 +587,25 @@ window.generateWordReport = async function() {
   }
 };
 
-// INICIALIZAÇÃO
+// AUTO-REFRESH para sincronização em tempo real
+let autoRefreshInterval;
 
+function startAutoRefresh() {
+  // Atualizar dados a cada 3 segundos para sincronização entre dispositivos
+  autoRefreshInterval = setInterval(() => {
+    loadData();
+  }, 3000);
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+  }
+}
+
+// INICIALIZAÇÃO
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("🚀 Inicializando MASTER LEAGUE...");
+  console.log("🚀 Inicializando MASTER LEAGUE com banco de dados...");
   
   // Verificar sessão admin
   if (localStorage.getItem("adminSession") === "active") {
@@ -708,8 +614,11 @@ document.addEventListener("DOMContentLoaded", () => {
     Utils.hide(document.getElementById("adminLogin"));
   }
   
-  // Carregar dados
+  // Carregar dados iniciais
   loadData();
+  
+  // Iniciar auto-refresh para sincronização
+  startAutoRefresh();
   
   // Event listener para Enter na senha admin
   const adminPasswordInput = document.getElementById("adminPassword");
@@ -721,5 +630,14 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
   
-  showNotification("🚀 Sistema carregado com sucesso!", 'success');
+  // Parar auto-refresh quando a janela não estiver ativa (economizar recursos)
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      stopAutoRefresh();
+    } else {
+      startAutoRefresh();
+    }
+  });
+  
+  showNotification("🚀 Sistema conectado ao banco de dados! Sincronização ativa.", 'success');
 });
